@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using NAudio.CoreAudioApi;
 using SndVolPlus.Properties;
 
+
 namespace SndVolPlus
 {
     static class Program
@@ -12,6 +13,8 @@ namespace SndVolPlus
         static NotifyIcon TrayIcon;
         static MMDevice DefaultMediaDevice;
         static string SystemDir = Environment.GetFolderPath(Environment.SpecialFolder.System) + @"\";
+
+        static Timer SingleClickWindow;
 
         [STAThread]
         private static void Main()
@@ -34,6 +37,14 @@ namespace SndVolPlus
             TrayIcon.ContextMenu.MenuItems.Add(new MenuItem("Sounds", (o, e) => { Process.Start(SystemDir + "rundll32.exe", @"Shell32.dll,Control_RunDLL mmsys.cpl,,sounds"); }));
             TrayIcon.ContextMenu.MenuItems.Add(new MenuItem("-"));
             TrayIcon.ContextMenu.MenuItems.Add(new MenuItem("Volume control options", (o, e) => { Process.Start(SystemDir + "sndvol.exe", "-p"); }));
+
+            SingleClickWindow = new Timer();
+            SingleClickWindow.Interval = SystemInformation.DoubleClickTime;
+            SingleClickWindow.Tick += (o, e) =>
+                {
+                    SingleClickWindow.Stop();
+                    StartVolControl();
+                };
 
             Application.Run();
         }
@@ -72,7 +83,11 @@ namespace SndVolPlus
         private static void TrayIcon_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
+            {
+                //We've recieved a second click, so disable the timer to prevent the single click event from occurring
+                SingleClickWindow.Stop();
                 StartVolMixer();
+            }
         }
 
         private static void TrayIcon_MouseClick(object sender, MouseEventArgs e)
@@ -81,8 +96,10 @@ namespace SndVolPlus
             {
                 case MouseButtons.Left:
                     {
-                        if (e.Clicks == 0)
-                            StartVolControl();
+                        if (SingleClickWindow.Enabled)
+                            SingleClickWindow.Stop();
+                        else
+                            SingleClickWindow.Start();
                     } break;
                 case MouseButtons.Middle:
                     {
@@ -93,12 +110,54 @@ namespace SndVolPlus
 
         private static void StartVolControl()
         {
-            Process.Start(SystemDir + @"sndvol.exe", "-f 67241586 17635");
+            Process SndVol = Process.Start(SystemDir + @"sndvol.exe", "-f");
+            MoveSndVolWindow(SndVol.Id);
         }
 
         private static void StartVolMixer()
         {
-            Process.Start(SystemDir + "sndvol.exe", "-r 67241586 17635");
+            Process SndVol = Process.Start(SystemDir + "sndvol.exe", "-r");
+            MoveSndVolWindow(SndVol.Id);
+        }
+
+        private static void MoveSndVolWindow(int SndVolId)
+        {
+            //Wait a little bit for the window to be created, with a max wait time of 100 * 10ms, or 1 second
+            for (int i = 0; i < 100; i++)
+            {
+                System.Threading.Thread.Sleep(10);
+
+                foreach (Process p in Process.GetProcessesByName("sndvol"))
+                {
+                    if (p.Id == SndVolId && p.MainWindowHandle != IntPtr.Zero)
+                    {
+                        Unmanaged.RECT SndVolRect = new Unmanaged.RECT();
+                        Unmanaged.GetWindowRect(p.MainWindowHandle, out SndVolRect);
+
+                        int x = 0, y = 0;
+                        switch (Helper.GetTaskbarEdge())
+                        {
+                            case DockStyle.Right:
+                            case DockStyle.Bottom:
+                                {
+                                    x = Screen.PrimaryScreen.WorkingArea.Right - (SndVolRect.right - SndVolRect.left);
+                                    y = Screen.PrimaryScreen.WorkingArea.Bottom - (SndVolRect.bottom - SndVolRect.top);
+                                } break;
+                            case DockStyle.Left:
+                                {
+                                    x = Screen.PrimaryScreen.WorkingArea.Left;
+                                    y = Screen.PrimaryScreen.WorkingArea.Bottom - (SndVolRect.bottom - SndVolRect.top);
+                                } break;
+                            case DockStyle.Top:
+                                {
+                                    x = Screen.PrimaryScreen.WorkingArea.Right - (SndVolRect.right - SndVolRect.left);
+                                    y = Screen.PrimaryScreen.WorkingArea.Top;
+                                } break;
+                        }
+                        Unmanaged.SetWindowPos(p.MainWindowHandle.ToInt32(), 0, x, y, 0, 0, 0x4000 | 0x0001);
+                    }
+                }
+            }
         }
     }
 }
