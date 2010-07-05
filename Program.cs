@@ -134,24 +134,25 @@ namespace SndVolPlus
                         Unmanaged.RECT SndVolRect = new Unmanaged.RECT();
                         Unmanaged.GetWindowRect(p.MainWindowHandle, out SndVolRect);
 
+                        int margin = 10;
                         int x = 0, y = 0;
                         switch (Helper.GetTaskbarEdge())
                         {
                             case DockStyle.Right:
                             case DockStyle.Bottom:
                                 {
-                                    x = Screen.PrimaryScreen.WorkingArea.Right - (SndVolRect.right - SndVolRect.left);
-                                    y = Screen.PrimaryScreen.WorkingArea.Bottom - (SndVolRect.bottom - SndVolRect.top);
+                                    x = Screen.PrimaryScreen.WorkingArea.Right - (SndVolRect.right - SndVolRect.left) - margin;
+                                    y = Screen.PrimaryScreen.WorkingArea.Bottom - (SndVolRect.bottom - SndVolRect.top) - margin;
                                 } break;
                             case DockStyle.Left:
                                 {
-                                    x = Screen.PrimaryScreen.WorkingArea.Left;
-                                    y = Screen.PrimaryScreen.WorkingArea.Bottom - (SndVolRect.bottom - SndVolRect.top);
+                                    x = Screen.PrimaryScreen.WorkingArea.Left + margin;
+                                    y = Screen.PrimaryScreen.WorkingArea.Bottom - (SndVolRect.bottom - SndVolRect.top) - margin;
                                 } break;
                             case DockStyle.Top:
                                 {
-                                    x = Screen.PrimaryScreen.WorkingArea.Right - (SndVolRect.right - SndVolRect.left);
-                                    y = Screen.PrimaryScreen.WorkingArea.Top;
+                                    x = Screen.PrimaryScreen.WorkingArea.Right - (SndVolRect.right - SndVolRect.left) - margin;
+                                    y = Screen.PrimaryScreen.WorkingArea.Top + margin;
                                 } break;
                         }
                         Unmanaged.SetWindowPos(p.MainWindowHandle.ToInt32(), 0, x, y, 0, 0, 0x4000 | 0x0001);
