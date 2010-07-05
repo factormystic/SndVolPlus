@@ -85,7 +85,7 @@ namespace SndVolPlus
             if (e.Button == MouseButtons.Left)
             {
                 //We've recieved a second click, so disable the timer to prevent the single click event from occurring
-                SingleClickWindow.Stop();
+                //SingleClickWindow.Stop();
                 StartVolMixer();
             }
         }
